@@ -1,1 +1,8 @@
 .aider*
+Build/.claude/
+backup-*/
+*.bak
+git-log.txt
+/SAM.API.dll
+/SAM.Game.exe
+/SAM.Picker.exe

@@ -54,6 +54,7 @@ namespace SAM.Picker
         private static readonly string IdleListPath = Path.Combine(Application.StartupPath, "idle-list.txt");
 
         private readonly HashSet<uint> _IdleList;
+        private bool _IdleListFileExisted;
         private readonly List<Process> _IdleProcesses;
         private GameInfo _ContextMenuGame;
 
@@ -174,7 +175,8 @@ namespace SAM.Picker
         {
             this._IdleList.Clear();
 
-            if (File.Exists(IdleListPath) == false)
+            this._IdleListFileExisted = File.Exists(IdleListPath);
+            if (this._IdleListFileExisted == false)
             {
                 return;
             }
@@ -405,8 +407,11 @@ namespace SAM.Picker
                 }
             }
 
-            this.NormalizeIdleList(true);
+            // Only auto-fill on first run (no idle-list.txt yet); afterwards the list is
+            // whatever the user toggled, so removed games don't get re-added.
+            this.NormalizeIdleList(this._IdleListFileExisted == false);
             this.SaveIdleList();
+            this._IdleListFileExisted = true;
             this.RefreshGames();
             this._RefreshGamesButton.Enabled = true;
             this.DownloadNextLogo();

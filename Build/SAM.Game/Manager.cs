@@ -412,7 +412,7 @@ namespace SAM.Game
                 {
                     this._GameStatusLabel.Text = "Error when handling achievements retrieval.";
                     this.EnableInput();
-                    if (this._AutoUnlockAll == false)
+                    if (this._AutoUnlockAll == false && this._BackgroundMode == false)
                     {
                         MessageBox.Show(
                             "Error when handling achievements retrieval:\n" + e,
@@ -431,7 +431,7 @@ namespace SAM.Game
                 {
                     this._GameStatusLabel.Text = "Error when handling stats retrieval.";
                     this.EnableInput();
-                    if (this._AutoUnlockAll == false)
+                    if (this._AutoUnlockAll == false && this._BackgroundMode == false)
                     {
                         MessageBox.Show(
                             "Error when handling stats retrieval:\n" + e,
@@ -513,7 +513,10 @@ namespace SAM.Game
             var callHandle = this._SteamClient.SteamUserStats.RequestUserStats(steamId);
             if (callHandle == API.CallHandle.Invalid)
             {
-                MessageBox.Show(this, "Failed.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (this._BackgroundMode == false)
+                {
+                    MessageBox.Show(this, "Failed.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 return;
             }
 
