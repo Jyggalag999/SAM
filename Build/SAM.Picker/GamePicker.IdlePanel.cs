@@ -86,7 +86,7 @@ namespace SAM.Picker
                 BackColor = Theme.Back,
                 ForeColor = Theme.Text,
                 DrawMode = DrawMode.OwnerDrawFixed,
-                ItemHeight = 26,
+                ItemHeight = Theme.UiFont.Height + 12, // scales with DPI
                 IntegralHeight = false,
                 SelectionMode = SelectionMode.MultiExtended,
             };
@@ -495,7 +495,7 @@ namespace SAM.Picker
                 g.FillRectangle(back, e.Bounds);
             }
 
-            const int dotSize = 8;
+            int dotSize = Math.Max(8, e.Bounds.Height / 3);
             var dot = new Rectangle(e.Bounds.Left + 10, e.Bounds.Top + (e.Bounds.Height - dotSize) / 2, dotSize, dotSize);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             if (isRunning == true)

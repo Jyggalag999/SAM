@@ -57,7 +57,11 @@ namespace SAM.Picker
             this._All = games.OrderBy(g => g.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
             this._Selected = selected.ToList();
 
+            this.SuspendLayout();
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleMode = AutoScaleMode.Dpi; // sizes below are at 100% scaling
             this.Text = "Choose games to idle";
+            this.ShowIcon = false;
             this.StartPosition = FormStartPosition.CenterParent;
             this.ClientSize = new Size(520, 600);
             this.MinimumSize = new Size(420, 420);
@@ -105,7 +109,7 @@ namespace SAM.Picker
                 BackColor = Theme.Back,
                 ForeColor = Theme.Text,
                 DrawMode = DrawMode.OwnerDrawFixed,
-                ItemHeight = 28,
+                ItemHeight = Theme.UiFont.Height + 14,
                 IntegralHeight = false,
                 Margin = new Padding(0, 0, 0, 8),
             };
@@ -188,6 +192,8 @@ namespace SAM.Picker
 
             this.AcceptButton = save;
             this.CancelButton = cancel;
+
+            this.ResumeLayout(true);
 
             this.RefreshList();
             this.Shown += (s, e) => this._SearchBox.Focus();
@@ -301,7 +307,8 @@ namespace SAM.Picker
                 g.FillRectangle(back, e.Bounds);
             }
 
-            var box = new Rectangle(e.Bounds.Left + 10, e.Bounds.Top + (e.Bounds.Height - 16) / 2, 16, 16);
+            int boxSize = e.Bounds.Height * 4 / 7;
+            var box = new Rectangle(e.Bounds.Left + 10, e.Bounds.Top + (e.Bounds.Height - boxSize) / 2, boxSize, boxSize);
             if (ticked)
             {
                 using var fill = new SolidBrush(Theme.Accent);
@@ -309,9 +316,9 @@ namespace SAM.Picker
                 using var tick = new Pen(Color.White, 2f);
                 g.DrawLines(tick, new[]
                 {
-                    new Point(box.Left + 3, box.Top + 8),
-                    new Point(box.Left + 7, box.Top + 12),
-                    new Point(box.Right - 3, box.Top + 4),
+                    new Point(box.Left + boxSize * 3 / 16, box.Top + boxSize / 2),
+                    new Point(box.Left + boxSize * 7 / 16, box.Top + boxSize * 3 / 4),
+                    new Point(box.Right - boxSize * 3 / 16, box.Top + boxSize / 4),
                 });
             }
             else

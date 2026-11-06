@@ -43,8 +43,9 @@ namespace SAM.Game
         {
             this.SuspendLayout();
             Theme.ApplyForm(this);
-            this.ClientSize = new Size(900, 600);
-            this.MinimumSize = new Size(640, 420);
+            float scale = this.DeviceDpi / 96f; // runs after the designer's auto-scaling
+            this.ClientSize = new Size((int)(900 * scale), (int)(600 * scale));
+            this.MinimumSize = new Size((int)(640 * scale), (int)(420 * scale));
 
             this._AchievementsPanel = MovePageToPanel(this._AchievementsTabPage);
             this._StatisticsPanel = MovePageToPanel(this._StatisticsTabPage);

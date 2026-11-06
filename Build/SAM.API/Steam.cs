@@ -58,9 +58,48 @@ namespace SAM.API
 
         private static IntPtr _Handle = IntPtr.Zero;
 
+        private static string _InstallPath;
+
+        // Modified: also checks the per-user key, since some Steam installs (moved or
+        // reinstalled libraries) only record their location under HKCU.
         public static string GetInstallPath()
         {
-            return (string)Registry.GetValue(@"HKEY_LOCAL_MACHINE\Software\Valve\Steam", "InstallPath", null);
+            if (_InstallPath != null)
+            {
+                return _InstallPath;
+            }
+
+            string[] candidates =
+            {
+                Registry.GetValue(@"HKEY_LOCAL_MACHINE\Software\Valve\Steam", "InstallPath", null) as string,
+                Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", null) as string,
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (string.IsNullOrEmpty(candidate) == true)
+                {
+                    continue;
+                }
+
+                string path;
+                try
+                {
+                    path = Path.GetFullPath(candidate.Replace('/', '\\')).TrimEnd('\\');
+                }
+                catch (Exception)
+                {
+                    continue;
+                }
+
+                if (File.Exists(Path.Combine(path, "steamclient.dll")) == true)
+                {
+                    return _InstallPath = path;
+                }
+            }
+
+            // Nothing verified; keep the original behaviour (registry value as-is).
+            return candidates[0];
         }
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Ansi)]

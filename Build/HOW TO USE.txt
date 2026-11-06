@@ -40,6 +40,14 @@ for Steam (up to about 5 minutes), starts the games on your list, then exits.
 Untick it to turn it off. If you move the folder, open SAM.Picker.exe once
 and the startup entry follows it.
 
+Removing SAM
+------------
+SAM is portable: it installs nothing and only writes idle-list.txt in its
+own folder. The one exception is the startup option, which adds a
+"SAM Auto Idle" entry to your Windows startup apps. Untick it (or press
+Stop all, then untick) before deleting the folder. If you forget, turn it off
+in Settings -> Apps -> Startup.
+
 Achievements
 ------------
 Double-click a game to open its achievement manager (the original SAM
