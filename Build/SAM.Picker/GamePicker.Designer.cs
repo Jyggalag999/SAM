@@ -32,7 +32,6 @@
             System.Windows.Forms.ToolStripSeparator _ToolStripSeparator1;
             System.Windows.Forms.ToolStripSeparator _ToolStripSeparator2;
             System.Windows.Forms.ToolStripSeparator _ToolStripSeparator3;
-            System.Windows.Forms.ToolStripSeparator _ToolStripSeparator4;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GamePicker));
             this._LogoImageList = new System.Windows.Forms.ImageList(this.components);
             this._CallbackTimer = new System.Windows.Forms.Timer(this.components);
@@ -48,10 +47,9 @@
             this._FilterModsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._FilterJunkMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._BatchUnlockButton = new System.Windows.Forms.ToolStripButton();
-            this._StartIdlingButton = new System.Windows.Forms.ToolStripButton();
-            this._StopIdlingButton = new System.Windows.Forms.ToolStripButton();
             this._GameContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this._IdleAtStartupMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this._OpenAchievementsMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this._GameListView = new SAM.Picker.MyListView();
             this._PickerStatusStrip = new System.Windows.Forms.StatusStrip();
             this._PickerStatusLabel = new System.Windows.Forms.ToolStripStatusLabel();
@@ -62,7 +60,6 @@
             _ToolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             _ToolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             _ToolStripSeparator3 = new System.Windows.Forms.ToolStripSeparator();
-            _ToolStripSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this._GameContextMenuStrip.SuspendLayout();
             this._PickerToolStrip.SuspendLayout();
             this._PickerStatusStrip.SuspendLayout();
@@ -82,11 +79,6 @@
             //
             _ToolStripSeparator3.Name = "_ToolStripSeparator3";
             _ToolStripSeparator3.Size = new System.Drawing.Size(6, 25);
-            //
-            // _ToolStripSeparator4
-            //
-            _ToolStripSeparator4.Name = "_ToolStripSeparator4";
-            _ToolStripSeparator4.Size = new System.Drawing.Size(6, 25);
             //
             // _LogoImageList
             //
@@ -111,10 +103,7 @@
             this._SearchGameTextBox,
             this._FilterDropDownButton,
             _ToolStripSeparator3,
-            this._BatchUnlockButton,
-            _ToolStripSeparator4,
-            this._StartIdlingButton,
-            this._StopIdlingButton});
+            this._BatchUnlockButton});
             this._PickerToolStrip.Location = new System.Drawing.Point(0, 0);
             this._PickerToolStrip.Name = "_PickerToolStrip";
             this._PickerToolStrip.Size = new System.Drawing.Size(742, 25);
@@ -215,28 +204,11 @@
             this._BatchUnlockButton.ToolTipText = "Launch SAM.Game for every listed game, one at a time, and unlock all of its achievements.";
             this._BatchUnlockButton.Click += new System.EventHandler(this.OnBatchUnlock);
             //
-            // _StartIdlingButton
-            //
-            this._StartIdlingButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this._StartIdlingButton.Name = "_StartIdlingButton";
-            this._StartIdlingButton.Size = new System.Drawing.Size(70, 22);
-            this._StartIdlingButton.Text = "Start Idling";
-            this._StartIdlingButton.ToolTipText = "Launch every game on the idle list right now, hidden in the background.";
-            this._StartIdlingButton.Click += new System.EventHandler(this.OnStartIdling);
-            //
-            // _StopIdlingButton
-            //
-            this._StopIdlingButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-            this._StopIdlingButton.Name = "_StopIdlingButton";
-            this._StopIdlingButton.Size = new System.Drawing.Size(68, 22);
-            this._StopIdlingButton.Text = "Stop Idling";
-            this._StopIdlingButton.ToolTipText = "Stop the idle games that this window started (does not affect ones started at Windows login).";
-            this._StopIdlingButton.Click += new System.EventHandler(this.OnStopIdling);
-            //
             // _GameContextMenuStrip
             //
             this._GameContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this._IdleAtStartupMenuItem});
+            this._IdleAtStartupMenuItem,
+            this._OpenAchievementsMenuItem});
             this._GameContextMenuStrip.Name = "_GameContextMenuStrip";
             this._GameContextMenuStrip.Size = new System.Drawing.Size(180, 26);
             this._GameContextMenuStrip.Opening += new System.ComponentModel.CancelEventHandler(this.OnGameListViewContextMenuOpening);
@@ -245,19 +217,27 @@
             //
             this._IdleAtStartupMenuItem.Name = "_IdleAtStartupMenuItem";
             this._IdleAtStartupMenuItem.Size = new System.Drawing.Size(179, 22);
-            this._IdleAtStartupMenuItem.Text = "Idle at Startup";
+            this._IdleAtStartupMenuItem.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this._IdleAtStartupMenuItem.Text = "Add to idle list";
             this._IdleAtStartupMenuItem.Click += new System.EventHandler(this.OnToggleIdleAtStartup);
+            //
+            // _OpenAchievementsMenuItem
+            //
+            this._OpenAchievementsMenuItem.Name = "_OpenAchievementsMenuItem";
+            this._OpenAchievementsMenuItem.Size = new System.Drawing.Size(179, 22);
+            this._OpenAchievementsMenuItem.Text = "Open achievements...";
+            this._OpenAchievementsMenuItem.Click += new System.EventHandler(this.OnOpenAchievementsMenuItem);
             //
             // _GameListView
             //
-            this._GameListView.BackColor = System.Drawing.Color.Black;
+            this._GameListView.BackColor = System.Drawing.Color.FromArgb(18, 18, 21);
             this._GameListView.ContextMenuStrip = this._GameContextMenuStrip;
             this._GameListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this._GameListView.ForeColor = System.Drawing.Color.White;
             this._GameListView.HideSelection = false;
             this._GameListView.LargeImageList = this._LogoImageList;
             this._GameListView.Location = new System.Drawing.Point(0, 25);
-            this._GameListView.MultiSelect = false;
+            this._GameListView.MultiSelect = true;
             this._GameListView.Name = "_GameListView";
             this._GameListView.OwnerDraw = true;
             this._GameListView.Size = new System.Drawing.Size(742, 245);
@@ -269,6 +249,7 @@
             this._GameListView.VirtualMode = true;
             this._GameListView.DrawItem += new System.Windows.Forms.DrawListViewItemEventHandler(this.OnGameListViewDrawItem);
             this._GameListView.ItemActivate += new System.EventHandler(this.OnActivateGame);
+            this._GameListView.KeyDown += new System.Windows.Forms.KeyEventHandler(this.OnGameListViewKeyDown);
             this._GameListView.RetrieveVirtualItem += new System.Windows.Forms.RetrieveVirtualItemEventHandler(this.OnGameListViewRetrieveVirtualItem);
             this._GameListView.SearchForVirtualItem += new System.Windows.Forms.SearchForVirtualItemEventHandler(this.OnGameListViewSearchForVirtualItem);
             //
@@ -322,13 +303,17 @@
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(742, 292);
+            this.ClientSize = new System.Drawing.Size(1040, 600);
+            this.MinimumSize = new System.Drawing.Size(720, 420);
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
+            this.BuildIdlePanel();
             this.Controls.Add(this._GameListView);
+            this.Controls.Add(this._IdlePanel);
             this.Controls.Add(this._PickerStatusStrip);
             this.Controls.Add(this._PickerToolStrip);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "GamePicker";
-            this.Text = "Steam Achievement Manager 7.0 | Pick a game... Any game...";
+            this.Text = "Steam Achievement Manager 7.0 (modified, with auto-idle)";
             this._PickerToolStrip.ResumeLayout(false);
             this._PickerToolStrip.PerformLayout();
             this._PickerStatusStrip.ResumeLayout(false);
@@ -359,10 +344,9 @@
         private System.Windows.Forms.ToolStripLabel _FindGamesLabel;
         private System.Windows.Forms.ToolStripButton _BatchUnlockButton;
         private System.ComponentModel.BackgroundWorker _BatchWorker;
-        private System.Windows.Forms.ToolStripButton _StartIdlingButton;
-        private System.Windows.Forms.ToolStripButton _StopIdlingButton;
         private System.Windows.Forms.ContextMenuStrip _GameContextMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem _IdleAtStartupMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem _OpenAchievementsMenuItem;
 
         #endregion
     }

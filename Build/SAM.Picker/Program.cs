@@ -20,7 +20,12 @@
  *    distribution.
  */
 
+// Modified: added the unattended --idle startup mode.
+
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace SAM.Picker
@@ -28,17 +33,30 @@ namespace SAM.Picker
     internal static class Program
     {
         [STAThread]
-        private static void Main()
+        private static void Main(string[] args)
         {
+            bool idleMode = args.Any(a => string.Equals(a, "--idle", StringComparison.OrdinalIgnoreCase));
+
             if (API.Steam.GetInstallPath() == Application.StartupPath)
             {
-                MessageBox.Show(
-                    "This tool declines to being run from the Steam directory.",
-                    "Error",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                if (idleMode == false)
+                {
+                    MessageBox.Show(
+                        "This tool declines to being run from the Steam directory.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
                 return;
             }
+
+            if (idleMode == true)
+            {
+                RunIdleMode();
+                return;
+            }
+
+            IdleManager.RepairStartupEntry();
 
             using (API.Client client = new())
             {
@@ -80,6 +98,47 @@ namespace SAM.Picker
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new GamePicker(client));
+            }
+        }
+
+        /// <summary>
+        /// Unattended mode used by the Windows startup entry: wait for Steam to be running
+        /// and signed in, launch the saved idle list hidden, then exit. Never shows dialogs.
+        /// </summary>
+        private static void RunIdleMode()
+        {
+            var ids = IdleManager.Load();
+            if (ids == null || ids.Count == 0)
+            {
+                return;
+            }
+
+            // Steam is often still starting at login; keep trying for up to ~5 minutes.
+            for (int attempt = 0; attempt < 30; attempt++)
+            {
+                API.Client client = new();
+                try
+                {
+                    client.Initialize(0);
+                }
+                catch (Exception)
+                {
+                    client.Dispose();
+                    Thread.Sleep(10000);
+                    continue;
+                }
+
+                List<uint> eligible;
+                using (client)
+                {
+                    eligible = ids
+                        .Where(id => IdleManager.IsInstalled(client, id))
+                        .Take(IdleManager.MaxIdleGames)
+                        .ToList();
+                }
+
+                IdleManager.Start(eligible, 2000);
+                return;
             }
         }
     }

@@ -1,0 +1,51 @@
+Steam Achievement Manager -- modified version with auto-idle
+=============================================================
+
+This is a MODIFIED build of Steam Achievement Manager by Rick "gibbed"
+(https://github.com/gibbed/SteamAchievementManager). The original is
+zlib-licensed (see LICENSE.txt). The changes add an idle list, one-click
+idling and optional idling at Windows startup.
+
+Requirements
+------------
+- Windows 10 or 11 (.NET Framework 4.8 is already built in)
+- Steam running and signed in
+
+Setup
+-----
+1. Unzip this folder somewhere permanent, e.g. Documents\SAM.
+   Do NOT put it inside the Steam folder. Don't run it from inside the zip.
+2. Run SAM.Picker.exe. Windows SmartScreen may warn because the exe isn't
+   signed: click "More info" -> "Run anyway".
+
+Idling games
+------------
+The panel on the right is your idle list (up to 30 games).
+1. Click "Choose games..." (or Idle menu -> Choose games to idle, Ctrl+I).
+   Tick the games you want, use the search box to find them, click Save.
+2. Click "Start idling". Every ticked game runs hidden in the background.
+   You can close the window afterwards; idling keeps going.
+3. "Stop all" stops every hidden idler, including ones started at login.
+
+Shortcuts: right-click a game -> "Add to idle list", or select games and
+press Insert. In the idle list, Delete or double-click removes a game.
+A green dot means that game is idling right now.
+
+Only installed games can idle. Steam shows them as "In game" while they idle.
+
+Idle at Windows startup
+-----------------------
+Tick "Start idling automatically when Windows starts". At sign-in, SAM waits
+for Steam (up to about 5 minutes), starts the games on your list, then exits.
+Untick it to turn it off. If you move the folder, open SAM.Picker.exe once
+and the startup entry follows it.
+
+Achievements
+------------
+Double-click a game to open its achievement manager (the original SAM
+feature). Changes to achievements are visible on your Steam profile.
+
+Files
+-----
+idle-list.txt is created next to the exe and holds your list. Delete it to
+start fresh.

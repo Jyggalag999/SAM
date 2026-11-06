@@ -61,6 +61,11 @@ namespace SAM.Game
 
             this.InitializeComponent();
 
+            if (this._BackgroundMode == false)
+            {
+                this.ApplyTheme();
+            }
+
             if (this._BackgroundMode == true)
             {
                 // Fully hidden: no window, no taskbar entry. The Steam session for this
@@ -594,7 +599,7 @@ namespace SAM.Game
                     Checked = isAchieved,
                     Tag = info,
                     Text = info.Name,
-                    BackColor = (def.Permission & 3) == 0 ? Color.Black : Color.FromArgb(64, 0, 0),
+                    BackColor = (def.Permission & 3) == 0 ? Theme.Back : Theme.Warning,
                 };
 
                 info.Item = item;

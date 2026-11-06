@@ -195,7 +195,7 @@
             // _AchievementListView
             // 
             this._AchievementListView.Activation = System.Windows.Forms.ItemActivation.OneClick;
-            this._AchievementListView.BackColor = System.Drawing.Color.Black;
+            this._AchievementListView.BackColor = System.Drawing.Color.FromArgb(18, 18, 21);
             this._AchievementListView.BackgroundImageTiled = true;
             this._AchievementListView.CheckBoxes = true;
             this._AchievementListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {

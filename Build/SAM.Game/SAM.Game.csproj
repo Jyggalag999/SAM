@@ -38,6 +38,9 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\Shared\Theme.cs" Link="Theme.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>

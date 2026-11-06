@@ -1,4 +1,4 @@
-/* Copyright (c) 2024 Rick (rick 'at' gibbed 'dot' us)
+﻿/* Copyright (c) 2024 Rick (rick 'at' gibbed 'dot' us)
  *
  * This software is provided 'as-is', without any express or implied
  * warranty. In no event will the authors be held liable for any damages
@@ -51,11 +51,7 @@ namespace SAM.Picker
 
         private readonly API.Callbacks.AppDataChanged _AppDataChangedCallback;
 
-        private static readonly string IdleListPath = Path.Combine(Application.StartupPath, "idle-list.txt");
-
-        private readonly HashSet<uint> _IdleList;
-        private bool _IdleListFileExisted;
-        private readonly List<Process> _IdleProcesses;
+        private readonly List<uint> _IdleList;
         private GameInfo _ContextMenuGame;
 
         public GamePicker(API.Client client)
@@ -67,16 +63,16 @@ namespace SAM.Picker
             this._LogosAttempted = new();
             this._LogoQueue = new();
             this._IdleList = new();
-            this._IdleProcesses = new();
 
             this.LoadIdleList();
 
             this.InitializeComponent();
+            this.ApplyTheme();
 
             Bitmap blank = new(this._LogoImageList.ImageSize.Width, this._LogoImageList.ImageSize.Height);
             using (var g = Graphics.FromImage(blank))
             {
-                g.Clear(Color.DimGray);
+                g.Clear(Theme.Surface2);
             }
 
             this._LogoImageList.Images.Add("Blank", blank);
@@ -86,132 +82,34 @@ namespace SAM.Picker
             this._AppDataChangedCallback = client.CreateAndRegisterCallback<API.Callbacks.AppDataChanged>();
             this._AppDataChangedCallback.OnRun += this.OnAppDataChanged;
 
+            this.InitializeIdlePanel();
             this.AddGames();
-        }
-
-        private const int MaxIdleGames = 30;
-
-        private static readonly HashSet<uint> ExcludedIdleGameIds = new()
-        {
-            22380,   // Fallout: New Vegas
-            72850,   // The Elder Scrolls V: Skyrim
-            489830,  // Skyrim Special Edition / Anniversary Edition
-            611670,  // Skyrim VR
-        };
-
-        private static bool IsExcludedIdleGame(uint id, string name)
-        {
-            if (ExcludedIdleGameIds.Contains(id))
-            {
-                return true;
-            }
-
-            string normalizedName = (name ?? "").Trim().ToLowerInvariant();
-
-            return normalizedName.Contains("skyrim")
-                || normalizedName.Contains("fallout: new vegas")
-                || normalizedName.Contains("fallout new vegas")
-                || normalizedName.Contains("blood of the dawnwalker")
-                || normalizedName.Contains("the blood of dawnwalker")
-                || normalizedName.Contains("dawnwalker");
-        }
-
-        private bool IsEligibleIdleGame(GameInfo game)
-        {
-            if (game == null
-                || game.Type == "demo"
-                || game.Type == "mod"
-                || game.Type == "junk"
-                || IsExcludedIdleGame(game.Id, game.Name))
-            {
-                return false;
-            }
-
-            try
-            {
-                return this._SteamClient.SteamApps008.IsAppInstalled(game.Id);
-            }
-            catch
-            {
-                // Fail closed: never idle a game if installation status is unknown.
-                return false;
-            }
-        }
-
-        private void NormalizeIdleList(bool fillAutomatically)
-        {
-            var validIds = this._IdleList
-                .Where(id => this._Games.TryGetValue(id, out var game)
-                    && this.IsEligibleIdleGame(game))
-                .Distinct()
-                .Take(MaxIdleGames)
-                .ToList();
-
-            this._IdleList.Clear();
-            foreach (var id in validIds)
-            {
-                this._IdleList.Add(id);
-            }
-
-            if (fillAutomatically && this._IdleList.Count < MaxIdleGames)
-            {
-                foreach (var game in this._Games.Values
-                    .Where(game => this.IsEligibleIdleGame(game))
-                    .OrderBy(game => game.Type == "normal" ? 0 : 1)
-                    .ThenBy(game => game.Name)
-                    .ThenBy(game => game.Id))
-                {
-                    if (this._IdleList.Count >= MaxIdleGames)
-                    {
-                        break;
-                    }
-
-                    this._IdleList.Add(game.Id);
-                }
-            }
         }
 
         private void LoadIdleList()
         {
             this._IdleList.Clear();
 
-            this._IdleListFileExisted = File.Exists(IdleListPath);
-            if (this._IdleListFileExisted == false)
+            List<uint> ids = null;
+            try
             {
-                return;
+                ids = IdleManager.Load();
+            }
+            catch (Exception)
+            {
             }
 
-            foreach (var rawLine in File.ReadAllLines(IdleListPath))
+            if (ids != null)
             {
-                var line = rawLine.Split('#')[0].Trim();
-                if (line.Length > 0 && uint.TryParse(line, out uint id) == true)
-                {
-                    this._IdleList.Add(id);
-                }
+                this._IdleList.AddRange(ids);
             }
         }
 
         private void SaveIdleList()
         {
-            List<string> lines = new()
-            {
-                "# Games to idle at Windows startup.",
-                "# Managed by SAM.Picker's \"Idle at Startup\" right-click toggle -- edits here are",
-                "# overwritten the next time a toggle is saved. One Steam App ID per line, optional",
-                "# trailing \"# name\" comment. Read by idle-games.ps1 at login.",
-            };
-
-            foreach (var id in this._IdleList.OrderBy(id => id))
-            {
-                var name = this._Games.TryGetValue(id, out var info) == true ? info.Name : null;
-                lines.Add(name != null
-                    ? $"{id.ToString(CultureInfo.InvariantCulture)} # {name}"
-                    : id.ToString(CultureInfo.InvariantCulture));
-            }
-
             try
             {
-                File.WriteAllLines(IdleListPath, lines);
+                IdleManager.Save(this._IdleList, this.IdleGameName);
             }
             catch (Exception e)
             {
@@ -235,7 +133,9 @@ namespace SAM.Picker
             }
 
             this._ContextMenuGame = this._FilteredGames[hit.Item.Index];
-            this._IdleAtStartupMenuItem.Checked = this._IdleList.Contains(this._ContextMenuGame.Id);
+            this._IdleAtStartupMenuItem.Text = this._IdleList.Contains(this._ContextMenuGame.Id)
+                ? "Remove from idle list"
+                : "Add to idle list";
         }
 
         private void OnToggleIdleAtStartup(object sender, EventArgs e)
@@ -245,103 +145,22 @@ namespace SAM.Picker
                 return;
             }
 
-            uint id = this._ContextMenuGame.Id;
+            // Right-clicking one of several selected games acts on the whole selection.
+            var selected = this.GetSelectedGames();
+            var targets = selected.Contains(this._ContextMenuGame)
+                ? selected
+                : new List<GameInfo>() { this._ContextMenuGame };
 
-            if (this._IdleList.Contains(id))
+            if (this._IdleList.Contains(this._ContextMenuGame.Id))
             {
-                this._IdleList.Remove(id);
+                this._IdleList.RemoveAll(id => targets.Any(g => g.Id == id));
+                this.SaveIdleList();
+                this.RefreshIdlePanel();
             }
             else
             {
-                if (!this.IsEligibleIdleGame(this._ContextMenuGame))
-                {
-                    MessageBox.Show(this,
-                        "This game is excluded from automatic idling.",
-                        "Idle at Startup",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
-
-                if (this._IdleList.Count >= MaxIdleGames)
-                {
-                    MessageBox.Show(this,
-                        $"The idle list is limited to {MaxIdleGames} games.",
-                        "Idle at Startup",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
-                    return;
-                }
-
-                this._IdleList.Add(id);
+                this.AddGamesToIdleList(targets);
             }
-
-            this.SaveIdleList();
-            this._GameListView.Invalidate();
-        }
-
-        private void OnStartIdling(object sender, EventArgs e)
-        {
-            this.NormalizeIdleList(false);
-            this.SaveIdleList();
-
-            if (this._IdleList.Count == 0)
-            {
-                MessageBox.Show(
-                    this,
-                    "No eligible owned games are selected for idling.",
-                    "Start Idling",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information);
-                return;
-            }
-
-            foreach (var id in this._IdleList.Take(MaxIdleGames))
-            {
-                try
-                {
-                    var process = Process.Start(
-                        "SAM.Game.exe",
-                        $"{id.ToString(CultureInfo.InvariantCulture)} --background");
-
-                    if (process != null)
-                    {
-                        this._IdleProcesses.Add(process);
-                    }
-                }
-                catch (Exception)
-                {
-                    // Best effort; a single bad launch shouldn't stop the rest.
-                }
-            }
-
-            this._PickerStatusLabel.Text =
-                $"Started idling up to {this._IdleList.Count} game(s) in the background.";
-        }
-
-        private void OnStopIdling(object sender, EventArgs e)
-        {
-            int stopped = 0;
-            foreach (var process in this._IdleProcesses)
-            {
-                try
-                {
-                    if (process.HasExited == false)
-                    {
-                        process.Kill();
-                        stopped++;
-                    }
-                }
-                catch (Exception)
-                {
-                    // Process may have already exited on its own; ignore.
-                }
-            }
-
-            this._IdleProcesses.Clear();
-            this._PickerStatusLabel.Text = stopped > 0
-                ? $"Stopped {stopped} idling game(s) started this session."
-                : "No idling games started this session to stop.";
         }
 
         private void OnAppDataChanged(APITypes.AppDataChanged param)
@@ -407,11 +226,7 @@ namespace SAM.Picker
                 }
             }
 
-            // Only auto-fill on first run (no idle-list.txt yet); afterwards the list is
-            // whatever the user toggled, so removed games don't get re-added.
-            this.NormalizeIdleList(this._IdleListFileExisted == false);
-            this.SaveIdleList();
-            this._IdleListFileExisted = true;
+            this.RefreshIdlePanel();
             this.RefreshGames();
             this._RefreshGamesButton.Enabled = true;
             this.DownloadNextLogo();
@@ -469,7 +284,9 @@ namespace SAM.Picker
             var info = this._FilteredGames[e.ItemIndex];
             e.Item = info.Item = new()
             {
-                Text = this._IdleList.Contains(info.Id) == true ? $"{info.Name}  [Idle]" : info.Name,
+                Text = this._RunningIds.Contains(info.Id) == true ? $"\u25CF {info.Name}  [Idling]"
+                    : this._IdleList.Contains(info.Id) == true ? $"{info.Name}  [Idle list]"
+                    : info.Name,
                 ImageIndex = info.ImageIndex,
             };
         }
@@ -724,9 +541,14 @@ namespace SAM.Picker
                 return;
             }
 
+            this.LaunchManager(info);
+        }
+
+        private void LaunchManager(GameInfo info)
+        {
             try
             {
-                Process.Start("SAM.Game.exe", info.Id.ToString(CultureInfo.InvariantCulture));
+                Process.Start(IdleManager.GameExePath, info.Id.ToString(CultureInfo.InvariantCulture));
             }
             catch (Win32Exception)
             {
@@ -742,6 +564,7 @@ namespace SAM.Picker
         private void OnRefresh(object sender, EventArgs e)
         {
             this._AddGameTextBox.Text = "";
+            this.InitializeIdlePanel();
             this.AddGames();
         }
 
@@ -787,7 +610,8 @@ namespace SAM.Picker
             }
 
             this._RefreshGamesButton.Enabled = false;
-            this._BatchUnlockButton.Text = "Cancel Batch";
+            this._BatchUnlockButton.Visible = true;
+            this._BatchUnlockMenuItem.Enabled = false;
             this._PickerStatusLabel.Text = "Starting batch unlock...";
             this._BatchWorker.RunWorkerAsync(this._FilteredGames.ToList());
         }
@@ -812,7 +636,7 @@ namespace SAM.Picker
                 try
                 {
                     string arguments = $"{game.Id.ToString(CultureInfo.InvariantCulture)} --auto-unlock";
-                    using var process = Process.Start("SAM.Game.exe", arguments);
+                    using var process = Process.Start(IdleManager.GameExePath, arguments);
                     process?.WaitForExit();
                 }
                 catch (Exception)
@@ -838,7 +662,8 @@ namespace SAM.Picker
         {
             this._RefreshGamesButton.Enabled = true;
             this._BatchUnlockButton.Enabled = true;
-            this._BatchUnlockButton.Text = "Batch Unlock All";
+            this._BatchUnlockButton.Visible = false;
+            this._BatchUnlockMenuItem.Enabled = true;
 
             if (e.Error != null)
             {
