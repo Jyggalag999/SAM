@@ -6,6 +6,9 @@ This is a MODIFIED build of Steam Achievement Manager by Rick "gibbed"
 zlib-licensed (see LICENSE.txt). The changes add an idle list, one-click
 idling and optional idling at Windows startup.
 
+Icons are from the Fugue Icons set by Yusuke Kamiyamane
+(https://p.yusukekamiyamane.com/), licensed CC BY 3.0.
+
 Requirements
 ------------
 - Windows 10 or 11 (.NET Framework 4.8 is already built in)

@@ -20,6 +20,8 @@
  *    distribution.
  */
 
+// Modified: background (--background) idle mode with a Steam-session watchdog, and the dark theme.
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

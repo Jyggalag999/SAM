@@ -20,6 +20,8 @@
  *    distribution.
  */
 
+// Modified: finds Steam via HKLM InstallPath or HKCU SteamPath and requires steamclient.dll.
+
 using System;
 using System.IO;
 using System.Runtime.InteropServices;

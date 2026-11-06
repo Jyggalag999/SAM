@@ -20,6 +20,8 @@
  *    distribution.
  */
 
+// Modified: added --background mode (quiet retries, no dialogs) and an absolute path to SAM.Picker.exe.
+
 using System;
 using System.Diagnostics;
 using System.Threading;
