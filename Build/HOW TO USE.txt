@@ -32,11 +32,13 @@ press Insert. In the idle list, Delete or double-click removes a game.
 A green dot means that game is idling right now.
 
 Only installed games can idle. Steam shows them as "In game" while they idle.
+Idling resumes on its own after Steam restarts or updates (SAM keeps a small
+hidden helper running; "Stop all" stops it too).
 
 Idle at Windows startup
 -----------------------
 Tick "Start idling automatically when Windows starts". At sign-in, SAM waits
-for Steam (up to about 5 minutes), starts the games on your list, then exits.
+for Steam, starts the games on your list, and restarts them if Steam restarts.
 Untick it to turn it off. If you move the folder, open SAM.Picker.exe once
 and the startup entry follows it.
 

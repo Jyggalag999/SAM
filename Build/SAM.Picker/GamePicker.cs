@@ -110,6 +110,8 @@ namespace SAM.Picker
             try
             {
                 IdleManager.Save(this._IdleList, this.IdleGameName);
+                // If the idle supervisor is running, apply the change right away.
+                IdleManager.SignalReload();
             }
             catch (Exception e)
             {

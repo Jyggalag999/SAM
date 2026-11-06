@@ -40,6 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Shared\Theme.cs" Link="Theme.cs" />
+    <Compile Include="..\Shared\SteamSession.cs" Link="SteamSession.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />

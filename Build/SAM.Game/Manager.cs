@@ -41,6 +41,9 @@ namespace SAM.Game
         private readonly bool _AutoUnlockAll;
         private readonly bool _BackgroundMode;
 
+        private SteamSession _InitialSteamSession;
+        private Timer _SessionWatchdogTimer;
+
         private readonly WebClient _IconDownloader = new();
 
         private readonly List<Stats.AchievementInfo> _IconQueue = new();
@@ -123,6 +126,31 @@ namespace SAM.Game
             //this.UserStatsStoredCallback = new API.Callback(1102, new API.Callback.CallbackFunction(this.OnUserStatsStored));
 
             this.RefreshStats();
+
+            if (this._BackgroundMode == true)
+            {
+                // A hidden idler is only useful while the Steam session it connected to
+                // lives. When Steam restarts or the user signs out, exit so the picker's
+                // idle supervisor (or the user) can start a fresh one.
+                this._InitialSteamSession = SteamSessionInfo.Read();
+                this._SessionWatchdogTimer = new Timer()
+                {
+                    Interval = 10000,
+                    Enabled = true,
+                };
+                this._SessionWatchdogTimer.Tick += this.OnSessionWatchdog;
+            }
+        }
+
+        private void OnSessionWatchdog(object sender, EventArgs e)
+        {
+            var current = SteamSessionInfo.Read();
+            if (current.SameAs(this._InitialSteamSession) == false ||
+                SteamSessionInfo.IsReady(current) == false)
+            {
+                this._SessionWatchdogTimer.Enabled = false;
+                Application.Exit();
+            }
         }
 
         protected override void SetVisibleCore(bool value)

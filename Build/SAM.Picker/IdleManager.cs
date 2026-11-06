@@ -30,6 +30,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -109,7 +110,7 @@ namespace SAM.Picker
         private static IEnumerable<ManagementObject> QueryBackgroundGameProcesses()
         {
             using var searcher = new ManagementObjectSearcher(
-                "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name = 'SAM.Game.exe'");
+                "SELECT ProcessId, CommandLine, ExecutablePath FROM Win32_Process WHERE Name = 'SAM.Game.exe'");
             foreach (ManagementObject process in searcher.Get())
             {
                 var commandLine = process["CommandLine"] as string ?? "";
@@ -120,16 +121,47 @@ namespace SAM.Picker
             }
         }
 
+        private static bool TryGetAppId(ManagementObject process, out uint id)
+        {
+            var match = Regex.Match(process["CommandLine"] as string ?? "", @"(\d+)\s+--background");
+            id = 0;
+            return match.Success && uint.TryParse(match.Groups[1].Value, out id);
+        }
+
+        /// <summary>True when the process runs the SAM.Game.exe next to this executable.</summary>
+        private static bool IsFromThisFolder(ManagementObject process)
+        {
+            try
+            {
+                return process["ExecutablePath"] is string path &&
+                    string.Equals(Path.GetFullPath(path), Path.GetFullPath(GameExePath), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         /// <summary>App IDs that currently have a hidden SAM.Game idling them (from any launcher).</summary>
         public static HashSet<uint> GetRunningIds()
+        {
+            return GetRunningIds(false);
+        }
+
+        /// <param name="thisFolderOnly">Only count idlers started from this folder's SAM.Game.exe.</param>
+        public static HashSet<uint> GetRunningIds(bool thisFolderOnly)
         {
             HashSet<uint> ids = new();
             try
             {
                 foreach (var process in QueryBackgroundGameProcesses())
                 {
-                    var match = Regex.Match(process["CommandLine"] as string ?? "", @"(\d+)\s+--background");
-                    if (match.Success && uint.TryParse(match.Groups[1].Value, out uint id))
+                    if (thisFolderOnly == true && IsFromThisFolder(process) == false)
+                    {
+                        continue;
+                    }
+
+                    if (TryGetAppId(process, out uint id))
                     {
                         ids.Add(id);
                     }
@@ -140,6 +172,161 @@ namespace SAM.Picker
                 // WMI unavailable; report nothing running rather than failing.
             }
             return ids;
+        }
+
+        /// <summary>
+        /// Stops the idlers launched from this folder whose app ID satisfies the predicate
+        /// (idlers from other folders are left alone). Used by the supervisor.
+        /// </summary>
+        public static int StopWhere(Func<uint, bool> shouldStop)
+        {
+            int stopped = 0;
+            try
+            {
+                foreach (var process in QueryBackgroundGameProcesses())
+                {
+                    if (IsFromThisFolder(process) == false ||
+                        TryGetAppId(process, out uint id) == false ||
+                        shouldStop(id) == false)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        using var p = Process.GetProcessById(Convert.ToInt32(process["ProcessId"], CultureInfo.InvariantCulture));
+                        p.Kill();
+                        stopped++;
+                    }
+                    catch (Exception)
+                    {
+                        // Already exited.
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // WMI unavailable.
+            }
+            return stopped;
+        }
+
+        private const string SupervisorMutexName = @"Local\SAM.IdleSupervisor";
+        private const string SupervisorReloadEventName = @"Local\SAM.IdleSupervisor.Reload";
+
+        /// <summary>Creates the single-instance mutex. False when another supervisor already holds it.</summary>
+        public static bool TryBecomeSupervisor(out Mutex mutex)
+        {
+            mutex = new Mutex(true, SupervisorMutexName, out bool created);
+            if (created == false)
+            {
+                mutex.Dispose();
+                mutex = null;
+            }
+            return created;
+        }
+
+        public static EventWaitHandle CreateReloadEvent()
+        {
+            return new EventWaitHandle(false, EventResetMode.AutoReset, SupervisorReloadEventName);
+        }
+
+        public static bool IsSupervisorRunning()
+        {
+            if (Mutex.TryOpenExisting(SupervisorMutexName, out Mutex mutex) == true)
+            {
+                mutex.Dispose();
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>Tells a running supervisor to re-read the idle list now. No-op when none runs.</summary>
+        public static void SignalReload()
+        {
+            try
+            {
+                if (EventWaitHandle.TryOpenExisting(SupervisorReloadEventName, out EventWaitHandle handle) == true)
+                {
+                    using (handle)
+                    {
+                        handle.Set();
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Not critical; the supervisor also re-reads the list on its own schedule.
+            }
+        }
+
+        /// <summary>Starts the idle supervisor (SAM.Picker.exe --idle), or asks the running one to reload the list.</summary>
+        public static void StartSupervisor()
+        {
+            if (IsSupervisorRunning() == true)
+            {
+                SignalReload();
+                return;
+            }
+
+            try
+            {
+                ProcessStartInfo info = new(Application.ExecutablePath, "--idle")
+                {
+                    WorkingDirectory = Application.StartupPath,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+                using var process = Process.Start(info);
+            }
+            catch (Exception)
+            {
+                // Best effort.
+            }
+        }
+
+        /// <summary>Kills the supervisor and any --idle-once helper it is running (this picker window is left alone).</summary>
+        public static int StopSupervisor()
+        {
+            int stopped = 0;
+            try
+            {
+                int ownPid;
+                using (var current = Process.GetCurrentProcess())
+                {
+                    ownPid = current.Id;
+                }
+
+                using var searcher = new ManagementObjectSearcher(
+                    "SELECT ProcessId, CommandLine FROM Win32_Process WHERE Name = 'SAM.Picker.exe'");
+                foreach (ManagementObject process in searcher.Get())
+                {
+                    var commandLine = process["CommandLine"] as string ?? "";
+                    int pid = Convert.ToInt32(process["ProcessId"], CultureInfo.InvariantCulture);
+                    // "--idle" also matches "--idle-once".
+                    if (commandLine.IndexOf("--idle", StringComparison.OrdinalIgnoreCase) < 0 ||
+                        pid == ownPid)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        using var p = Process.GetProcessById(pid);
+                        p.Kill();
+                        stopped++;
+                    }
+                    catch (Exception)
+                    {
+                        // Already exited.
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // WMI unavailable.
+            }
+            return stopped;
         }
 
         /// <summary>Launches a hidden SAM.Game for each ID not already idling. Returns how many started.</summary>

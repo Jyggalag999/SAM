@@ -439,7 +439,16 @@ namespace SAM.Picker
             int otherIdling = this._RunningIds.Count(id => this._IdleList.Contains(id) == false);
 
             string text = $"{this._IdleList.Count} of {IdleManager.MaxIdleGames} games  ·  ";
-            text += idling == 0 && otherIdling == 0 ? "not idling" : $"{idling} idling now";
+            if (idling == 0 && otherIdling == 0)
+            {
+                bool waitingForSteam = IdleManager.IsSupervisorRunning() == true &&
+                    SteamSessionInfo.IsReady(SteamSessionInfo.Read()) == false;
+                text += waitingForSteam == true ? "waiting for Steam..." : "not idling";
+            }
+            else
+            {
+                text += $"{idling} idling now";
+            }
             if (otherIdling > 0)
             {
                 text += $" (+{otherIdling} not on list)";
@@ -720,7 +729,9 @@ namespace SAM.Picker
             this._StartIdlingButton.Enabled = false;
             this._PickerStatusLabel.Text = $"Starting {ids.Count} game(s)...";
 
-            Task.Run(() => IdleManager.Start(ids, 300)).ContinueWith(task =>
+            // The supervisor launches the list and keeps it running across Steam restarts.
+            int starting = ids.Count(id => this._RunningIds.Contains(id) == false);
+            Task.Run(() => IdleManager.StartSupervisor()).ContinueWith(task =>
             {
                 if (this.IsDisposed == true)
                 {
@@ -728,9 +739,8 @@ namespace SAM.Picker
                 }
 
                 this._StartIdlingButton.Enabled = true;
-                int started = task.Status == TaskStatus.RanToCompletion ? task.Result : 0;
-                this._PickerStatusLabel.Text = started > 0
-                    ? $"Started idling {started} game(s) in the background. You can close this window."
+                this._PickerStatusLabel.Text = starting > 0
+                    ? $"Started idling {starting} game(s) in the background. You can close this window."
                     : "Everything on the idle list is already idling.";
                 this.RefreshRunningState();
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -738,6 +748,8 @@ namespace SAM.Picker
 
         private void OnStopIdling(object sender, EventArgs e)
         {
+            // Stop the supervisor first, otherwise it would just start the games again.
+            IdleManager.StopSupervisor();
             int stopped = IdleManager.StopAll();
             this._PickerStatusLabel.Text = stopped > 0
                 ? $"Stopped {stopped} idling game(s)."
